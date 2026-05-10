@@ -179,7 +179,8 @@ const SETTINGS_KEY = 'training_settings';
 let todayCounts = { ...DEFAULT_COUNTS };
 let todayDone = { abs: false, squat: false, pushup: false };
 let todayRecorded = false;
-let calYear, calMonth;
+const _initDate = new Date();
+let calYear = _initDate.getFullYear(), calMonth = _initDate.getMonth();
 let settings = {};
 
 function loadSettings() {
@@ -315,6 +316,9 @@ function saveRecord() {
   records[key] = { done: { ...todayDone }, counts: { ...todayCounts }, stars: n, ts: Date.now() };
   saveRecords(records);
   todayRecorded = true;
+  const _now = new Date();
+  calYear = _now.getFullYear();
+  calMonth = _now.getMonth();
   renderStars();
   updateRecordBtn();
   const msgs = ['', '1種目を記録しました！', '2種目を記録しました！', '全種目完了！素晴らしい！'];
