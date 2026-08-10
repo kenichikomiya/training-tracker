@@ -15,13 +15,17 @@
 .progress-card,.stats-card,.setting-row,.history-item{background:#fff;border:1px solid var(--border);border-radius:18px;padding:15px;box-shadow:var(--shadow)}.week-head{display:flex;justify-content:space-between;align-items:center}.week-bar{height:12px;background:#e8f3eb;border-radius:10px;margin-top:10px;overflow:hidden}.week-fill{height:100%;background:linear-gradient(90deg,#4db87a,#9adb78)}.mini-note{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.5}.badges{display:flex;gap:8px;flex-wrap:wrap}.badge{background:#edf8f0;color:#32734c;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700}.badge.gold{background:#fff6d8;color:#936b00}
 .cal-nav{display:flex;align-items:center;justify-content:space-between}.cal-nav-btn{width:42px;height:42px;border:none;border-radius:50%;background:#fff;box-shadow:var(--shadow);font-size:20px}.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.cal-dow{text-align:center;font-size:11px;color:var(--sub);padding:4px}.cal-day{background:#fff;border:1px solid var(--border);border-radius:12px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center}.cal-day.today{outline:2px solid var(--green)}.cal-stars{font-size:9px;color:#e1a900}.history-item{display:flex;justify-content:space-between;align-items:center}.history-date{font-weight:700}.history-detail{font-size:12px;color:var(--sub);margin-top:3px}.history-stars{color:#e1a900}
 .setting-row{display:flex;justify-content:space-between;align-items:center}.setting-label{font-weight:700}.setting-sub{font-size:12px;color:var(--sub);margin-top:3px}.danger{background:#fff1f1;border:1px solid #f1c7c7;color:var(--danger)}
+.editing-note{display:none;background:#fff7df;border:1px solid #ecd48a;border-radius:14px;padding:10px 12px;font-size:13px;color:#755b00}.editing-note.show{display:block}
+.tabata-card{background:linear-gradient(135deg,#f7fbff,#eef7ff);border-color:#cfe3f5}.youtube-btn{border:none;border-radius:12px;background:#fff0f0;color:#c93636;font-weight:800;font-size:13px;padding:10px 12px;white-space:nowrap}.youtube-btn:active{transform:scale(.98)}
+.cal-day{cursor:pointer}.cal-day.future{opacity:.38;cursor:default}.cal-day.selected{background:#ecfaf1;border-color:#79c998}.history-item{cursor:pointer}
 nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);display:flex;background:rgba(255,255,255,.94);backdrop-filter:blur(18px);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);z-index:10}nav button{flex:1;border:none;background:none;padding:11px 4px 10px;color:var(--sub);font-size:12px}nav button.active{color:var(--green);font-weight:800}.nav-ico{font-size:21px;display:block;margin-bottom:2px}#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:#254638;color:#fff;padding:10px 18px;border-radius:999px;opacity:0;transition:.25s;z-index:20}#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style></head><body><div id="app">
 <section class="page active" id="page-today">
   <div class="hero"><h1>今日も、少しだけ。</h1><p id="today-date"></p><div class="summary-grid"><div class="summary-card"><div class="v" id="streak-now">0日</div><div class="l">連続記録</div></div><div class="summary-card"><div class="v" id="week-now">0/5</div><div class="l">今週</div></div><div class="summary-card"><div class="v" id="total-reps">0</div><div class="l">累計回数</div></div></div></div>
   <div class="progress-card"><div class="week-head"><strong>今週の目標</strong><span id="week-label">0 / 5日</span></div><div class="week-bar"><div class="week-fill" id="week-fill" style="width:0%"></div></div><div class="mini-note">1種目でも記録すれば、その日は継続成功。無理なく続けることを優先します。</div></div>
-  <div class="section-title">今日のトレーニング</div><div id="exercise-list"></div>
-  <button class="record-btn" id="record-btn" onclick="saveRecord()">記録する</button><button class="action-btn secondary" id="reset-btn" onclick="resetToday()" style="display:none">今日の記録をやり直す</button>
+  <div class="editing-note" id="editing-note"></div>
+  <div class="section-title" id="training-title">今日のトレーニング</div><div id="exercise-list"></div>
+  <button class="record-btn" id="record-btn" onclick="saveRecord()">記録する</button><button class="action-btn secondary" id="reset-btn" onclick="resetSelectedDate()" style="display:none">この日の記録を削除</button>
   <div class="stats-card"><div class="section-title">積み重ね</div><div class="badges" id="badges"></div><div class="mini-note" id="best-streak"></div></div>
 </section>
 <section class="page" id="page-calendar"><div class="cal-nav"><button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button><strong id="cal-month-label"></strong><button class="cal-nav-btn" onclick="changeMonth(1)">›</button></div><div class="cal-grid" id="cal-grid"></div><div id="history-list"></div></section>
@@ -30,30 +34,114 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,
 <script>
 const EXERCISES=[{id:'abs',name:'腹筋',emoji:'🔥'},{id:'squat',name:'スクワット',emoji:'🦵'},{id:'pushup',name:'腕立て',emoji:'💪'}];
 const STORAGE_KEY='training_records',SETTINGS_KEY='training_settings';
-let todayCounts={},todayDone={},todayRecorded=false,calDate=new Date(),settings={};
+const TABATA_URL='https://youtu.be/zCPaKDSGIDk?si=GFt_65kA7TFPk6m0';
+let todayCounts={},todayDone={},todayRecorded=false,calDate=new Date(),settings={},selectedDate=new Date();
 function loadSettings(){try{settings=JSON.parse(localStorage.getItem(SETTINGS_KEY))||{}}catch{settings={}};EXERCISES.forEach(e=>{if(!settings[e.id+'_default'])settings[e.id+'_default']=30;if(!settings[e.id+'_minimum'])settings[e.id+'_minimum']=5});if(!settings.weeklyGoal)settings.weeklyGoal=5}
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings))} function loadRecords(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||{}}catch{return{}}} function saveRecords(r){localStorage.setItem(STORAGE_KEY,JSON.stringify(r))}
 function keyFor(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`} function todayKey(){return keyFor(new Date())}
 function formatDateJP(d){const days=['日','月','火','水','木','金','土'];return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`}
-function initToday(){EXERCISES.forEach(e=>{todayCounts[e.id]=settings[e.id+'_default'];todayDone[e.id]=false});const rec=loadRecords()[todayKey()];if(rec){todayDone={...todayDone,...rec.done};todayCounts={...todayCounts,...rec.counts};todayRecorded=true}else todayRecorded=false;document.getElementById('today-date').textContent=formatDateJP(new Date());renderExercises();renderDashboard();updateRecordBtn()}
-function renderExercises(){const el=document.getElementById('exercise-list');el.innerHTML='';el.style.display='flex';el.style.flexDirection='column';el.style.gap='10px';EXERCISES.forEach(ex=>{const c=document.createElement('div');c.className='exercise-card'+(todayDone[ex.id]?' done':'');c.innerHTML=`<button class="check-btn" onclick="toggleExercise('${ex.id}')">${todayDone[ex.id]?'✓':''}</button><div class="ex-info"><div class="ex-name">${ex.emoji} ${ex.name}</div><div class="ex-meta">最低ライン ${settings[ex.id+'_minimum']}回</div></div><div class="count-ctrl"><button class="count-btn" onclick="adjustCount('${ex.id}',-5)">−</button><span class="count-val">${todayCounts[ex.id]}</span><button class="count-btn" onclick="adjustCount('${ex.id}',5)">＋</button></div>`;el.appendChild(c)})}
-function toggleExercise(id){if(todayRecorded)return;todayDone[id]=!todayDone[id];renderExercises()} function adjustCount(id,d){if(todayRecorded)return;todayCounts[id]=Math.max(1,todayCounts[id]+d);renderExercises()}
-function saveRecord(){const r=loadRecords();const stars=Object.values(todayDone).filter(Boolean).length;r[todayKey()]={done:{...todayDone},counts:{...todayCounts},stars,ts:Date.now()};saveRecords(r);todayRecorded=true;updateRecordBtn();renderDashboard();showToast(stars?'記録しました':'0種目で記録しました')}
-function resetToday(){if(!confirm('今日の記録をやり直しますか？'))return;const r=loadRecords();delete r[todayKey()];saveRecords(r);initToday();showToast('今日の記録をリセットしました')}
-function updateRecordBtn(){const b=document.getElementById('record-btn'),r=document.getElementById('reset-btn');if(todayRecorded){b.textContent='記録済み ✓';b.classList.add('saved');b.onclick=null;r.style.display='block'}else{b.textContent='記録する';b.classList.remove('saved');b.onclick=saveRecord;r.style.display='none'}}
+function dateFromKey(k){const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)}
+function selectedKey(){return keyFor(selectedDate)}
+function isTodaySelected(){return selectedKey()===todayKey()}
+function initToday(){selectedDate=new Date();loadSelectedDate()}
+function loadSelectedDate(){
+  EXERCISES.forEach(e=>{todayCounts[e.id]=settings[e.id+'_default'];todayDone[e.id]=false});
+  todayDone.tabata=false;
+  const rec=loadRecords()[selectedKey()];
+  if(rec){
+    todayDone={...todayDone,...(rec.done||{})};
+    todayCounts={...todayCounts,...(rec.counts||{})};
+    todayRecorded=true;
+  }else todayRecorded=false;
+  document.getElementById('today-date').textContent=formatDateJP(selectedDate);
+  const past=!isTodaySelected();
+  document.getElementById('training-title').textContent=past?'この日のトレーニング':'今日のトレーニング';
+  const note=document.getElementById('editing-note');
+  if(past){note.textContent=`過去の記録を編集中：${formatDateJP(selectedDate)}`;note.classList.add('show')}
+  else{note.textContent='';note.classList.remove('show')}
+  renderExercises();renderDashboard();updateRecordBtn();
+}
+function renderExercises(){
+  const el=document.getElementById('exercise-list');el.innerHTML='';el.style.display='flex';el.style.flexDirection='column';el.style.gap='10px';
+
+  const t=document.createElement('div');
+  t.className='exercise-card tabata-card'+(todayDone.tabata?' done':'');
+  t.innerHTML=`<button class="check-btn" onclick="toggleExercise('tabata')">${todayDone.tabata?'✓':''}</button>
+    <div class="ex-info"><div class="ex-name">⏱️ TABATA Training</div><div class="ex-meta">YouTubeを見ながらトレーニング</div></div>
+    <button class="youtube-btn" onclick="openTabata(event)">YouTube ▶</button>`;
+  el.appendChild(t);
+
+  EXERCISES.forEach(ex=>{
+    const c=document.createElement('div');c.className='exercise-card'+(todayDone[ex.id]?' done':'');
+    c.innerHTML=`<button class="check-btn" onclick="toggleExercise('${ex.id}')">${todayDone[ex.id]?'✓':''}</button><div class="ex-info"><div class="ex-name">${ex.emoji} ${ex.name}</div><div class="ex-meta">最低ライン ${settings[ex.id+'_minimum']}回</div></div><div class="count-ctrl"><button class="count-btn" onclick="adjustCount('${ex.id}',-5)">−</button><span class="count-val">${todayCounts[ex.id]}</span><button class="count-btn" onclick="adjustCount('${ex.id}',5)">＋</button></div>`;
+    el.appendChild(c)
+  })
+}
+function openTabata(e){if(e)e.stopPropagation();window.location.href=TABATA_URL}
+function toggleExercise(id){todayDone[id]=!todayDone[id];todayRecorded=false;renderExercises();updateRecordBtn()}
+function adjustCount(id,d){todayCounts[id]=Math.max(1,todayCounts[id]+d);todayRecorded=false;renderExercises();updateRecordBtn()}
+function calcStars(done){return EXERCISES.filter(e=>done?.[e.id]).length}
+function saveRecord(){
+  const r=loadRecords(),stars=calcStars(todayDone);
+  r[selectedKey()]={done:{...todayDone},counts:{...todayCounts},stars,ts:Date.now()};
+  saveRecords(r);todayRecorded=true;updateRecordBtn();renderDashboard();renderCalendar();
+  const active=Object.values(todayDone).some(Boolean);
+  showToast(active?'記録しました':'0種目で記録しました')
+}
+function resetSelectedDate(){
+  const label=isTodaySelected()?'今日':`${selectedDate.getMonth()+1}月${selectedDate.getDate()}日`;
+  if(!confirm(`${label}の記録を削除しますか？`))return;
+  const r=loadRecords();delete r[selectedKey()];saveRecords(r);loadSelectedDate();renderCalendar();showToast('記録を削除しました')
+}
+function updateRecordBtn(){
+  const b=document.getElementById('record-btn'),r=document.getElementById('reset-btn');
+  if(todayRecorded){b.textContent='記録済み ✓';b.classList.add('saved')}
+  else{b.textContent=isTodaySelected()?'記録する':'この日の記録を保存';b.classList.remove('saved')}
+  b.onclick=saveRecord;
+  r.style.display=loadRecords()[selectedKey()]?'block':'none'
+}
+function editDate(k){
+  const d=dateFromKey(k),today=dateFromKey(todayKey());
+  if(d>today)return;
+  selectedDate=d;
+  showPage('today',true);
+  loadSelectedDate();
+  window.scrollTo({top:0,behavior:'smooth'})
+}
 function getActiveKeys(){const r=loadRecords();return Object.keys(r).filter(k=>Object.values(r[k].done||{}).some(Boolean)).sort()}
 function streaks(){const keys=new Set(getActiveKeys());let cur=0,best=0,run=0;const all=[...keys].sort();for(let i=0;i<all.length;i++){if(i===0)run=1;else{const a=new Date(all[i-1]+'T00:00:00'),b=new Date(all[i]+'T00:00:00');run=((b-a)/86400000===1)?run+1:1}best=Math.max(best,run)}let d=new Date();if(!keys.has(keyFor(d)))d.setDate(d.getDate()-1);while(keys.has(keyFor(d))){cur++;d.setDate(d.getDate()-1)}return{cur,best}}
 function weekStats(){const now=new Date(),start=new Date(now);start.setDate(now.getDate()-((now.getDay()+6)%7));start.setHours(0,0,0,0);let days=0;const r=loadRecords();for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);const rec=r[keyFor(d)];if(rec&&Object.values(rec.done||{}).some(Boolean))days++}return days}
 function totals(){const r=loadRecords();let reps=0,days=0;Object.values(r).forEach(rec=>{let active=false;EXERCISES.forEach(e=>{if(rec.done?.[e.id]){reps+=Number(rec.counts?.[e.id]||0);active=true}});if(active)days++});return{reps,days}}
 function renderDashboard(){const s=streaks(),w=weekStats(),t=totals(),goal=settings.weeklyGoal||5;document.getElementById('streak-now').textContent=s.cur+'日';document.getElementById('week-now').textContent=`${w}/${goal}`;document.getElementById('total-reps').textContent=t.reps.toLocaleString();document.getElementById('week-label').textContent=`${w} / ${goal}日`;document.getElementById('week-fill').style.width=Math.min(100,w/goal*100)+'%';document.getElementById('best-streak').textContent=`自己ベスト：${s.best}日連続 ／ 実施日数：${t.days}日`;const b=[];if(s.cur>=3)b.push('🌱 3日継続');if(s.cur>=7)b.push('🔥 7日継続');if(s.cur>=30)b.push('🏆 30日継続');if(t.reps>=1000)b.push('💯 累計1,000回');if(t.reps>=5000)b.push('⭐ 累計5,000回');if(w>=goal)b.push('✅ 今週の目標達成');document.getElementById('badges').innerHTML=(b.length?b:['まずは1日から']).map(x=>`<span class="badge ${x.includes('🏆')?'gold':''}">${x}</span>`).join('')}
-function renderCalendar(){const y=calDate.getFullYear(),m=calDate.getMonth(),r=loadRecords();document.getElementById('cal-month-label').textContent=`${y}年${m+1}月`;const g=document.getElementById('cal-grid');g.innerHTML='';['日','月','火','水','木','金','土'].forEach(x=>g.innerHTML+=`<div class="cal-dow">${x}</div>`);const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();for(let i=0;i<first;i++)g.innerHTML+='<div></div>';for(let d=1;d<=days;d++){const k=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,rec=r[k],today=k===todayKey();g.innerHTML+=`<div class="cal-day ${today?'today':''}"><div>${d}</div><div class="cal-stars">${rec?'★'.repeat(rec.stars||0):''}</div></div>`}const h=document.getElementById('history-list');h.innerHTML='';h.style.display='flex';h.style.flexDirection='column';h.style.gap='8px';Object.keys(r).filter(k=>k.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).sort().reverse().forEach(k=>{const rec=r[k],details=EXERCISES.filter(e=>rec.done?.[e.id]).map(e=>`${e.name}${rec.counts[e.id]}回`).join('・');const [yy,mm,dd]=k.split('-');h.innerHTML+=`<div class="history-item"><div><div class="history-date">${Number(mm)}月${Number(dd)}日</div><div class="history-detail">${details||'記録のみ'}</div></div><div class="history-stars">${'★'.repeat(rec.stars||0)}</div></div>`});if(!h.innerHTML)h.innerHTML='<div class="mini-note" style="text-align:center;padding:20px">この月の記録はありません</div>'}
+function renderCalendar(){
+  const y=calDate.getFullYear(),m=calDate.getMonth(),r=loadRecords(),todayK=todayKey(),selK=selectedKey();
+  document.getElementById('cal-month-label').textContent=`${y}年${m+1}月`;
+  const g=document.getElementById('cal-grid');g.innerHTML='';
+  ['日','月','火','水','木','金','土'].forEach(x=>g.innerHTML+=`<div class="cal-dow">${x}</div>`);
+  const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<first;i++)g.innerHTML+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const k=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,rec=r[k],today=k===todayK,future=k>todayK,selected=k===selK;
+    const tabata=rec?.done?.tabata?'T':'';
+    g.innerHTML+=`<div class="cal-day ${today?'today':''} ${future?'future':''} ${selected?'selected':''}" ${future?'':`onclick="editDate('${k}')"`}><div>${d}</div><div class="cal-stars">${rec?'★'.repeat(rec.stars||0):''}${tabata?` ${tabata}`:''}</div></div>`
+  }
+  const h=document.getElementById('history-list');h.innerHTML='';h.style.display='flex';h.style.flexDirection='column';h.style.gap='8px';
+  Object.keys(r).filter(k=>k.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).sort().reverse().forEach(k=>{
+    const rec=r[k],parts=[];
+    if(rec.done?.tabata)parts.push('TABATA Training');
+    EXERCISES.filter(e=>rec.done?.[e.id]).forEach(e=>parts.push(`${e.name}${rec.counts?.[e.id]||0}回`));
+    const [yy,mm,dd]=k.split('-');
+    h.innerHTML+=`<div class="history-item" onclick="editDate('${k}')"><div><div class="history-date">${Number(mm)}月${Number(dd)}日</div><div class="history-detail">${parts.join('・')||'記録のみ'}</div></div><div class="history-stars">${'★'.repeat(rec.stars||0)}</div></div>`
+  });
+  if(!h.innerHTML)h.innerHTML='<div class="mini-note" style="text-align:center;padding:20px">この月の記録はありません</div>'
+}
 function changeMonth(d){calDate.setMonth(calDate.getMonth()+d);renderCalendar()}
 function renderSettings(){const el=document.getElementById('settings-list');el.innerHTML='';el.style.display='flex';el.style.flexDirection='column';el.style.gap='10px';EXERCISES.forEach(ex=>{el.innerHTML+=`<div class="setting-row"><div><div class="setting-label">${ex.emoji} ${ex.name}</div><div class="setting-sub">通常回数</div></div><div class="count-ctrl"><button class="count-btn" onclick="adjustSetting('${ex.id}_default',-5)">−</button><span class="count-val">${settings[ex.id+'_default']}</span><button class="count-btn" onclick="adjustSetting('${ex.id}_default',5)">＋</button></div></div><div class="setting-row"><div><div class="setting-label">${ex.emoji} ${ex.name}</div><div class="setting-sub">忙しい日の最低ライン</div></div><div class="count-ctrl"><button class="count-btn" onclick="adjustSetting('${ex.id}_minimum',-1)">−</button><span class="count-val">${settings[ex.id+'_minimum']}</span><button class="count-btn" onclick="adjustSetting('${ex.id}_minimum',1)">＋</button></div></div>`});el.innerHTML+=`<div class="setting-row"><div><div class="setting-label">週間目標</div><div class="setting-sub">1種目以上行う日数</div></div><div class="count-ctrl"><button class="count-btn" onclick="adjustWeekly(-1)">−</button><span class="count-val">${settings.weeklyGoal}</span><button class="count-btn" onclick="adjustWeekly(1)">＋</button></div></div>`}
 function adjustSetting(k,d){settings[k]=Math.max(1,(settings[k]||30)+d);saveSettings();renderSettings()} function adjustWeekly(d){settings.weeklyGoal=Math.max(1,Math.min(7,(settings.weeklyGoal||5)+d));saveSettings();renderSettings();renderDashboard()}
 function exportData(){const blob=new Blob([JSON.stringify({records:loadRecords(),settings,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`training-${todayKey()}.json`;a.click();URL.revokeObjectURL(url)}
-function importData(){document.getElementById('import-file').click()} function handleImport(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.records)throw 0;if(!confirm('現在のデータを上書きしてインポートしますか？'))return;saveRecords(d.records);if(d.settings){settings=d.settings;saveSettings()}loadSettings();initToday();renderSettings();showToast('インポートしました')}catch{showToast('インポートに失敗しました')}};rd.readAsText(f);e.target.value=''}
+function importData(){document.getElementById('import-file').click()} function handleImport(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.records)throw 0;if(!confirm('現在のデータを上書きしてインポートしますか？'))return;saveRecords(d.records);if(d.settings){settings=d.settings;saveSettings()}loadSettings();initToday();renderSettings();renderCalendar();showToast('インポートしました')}catch{showToast('インポートに失敗しました')}};rd.readAsText(f);e.target.value=''}
 function clearAllData(){if(!confirm('本当にすべての記録を消していいですか？\nこの操作は取り消せません。'))return;if(!confirm('最終確認です。トレーニング記録をすべて消去しますか？'))return;localStorage.removeItem(STORAGE_KEY);initToday();renderCalendar();renderDashboard();showToast('すべての記録を消去しました')}
-function showPage(n){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+n).classList.add('active');document.getElementById('nav-'+n).classList.add('active');if(n==='calendar')renderCalendar();if(n==='settings')renderSettings();if(n==='today')initToday()}
+function showPage(n,preserveDate=false){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+n).classList.add('active');document.getElementById('nav-'+n).classList.add('active');if(n==='calendar')renderCalendar();if(n==='settings')renderSettings();if(n==='today'&&!preserveDate)initToday()}
 let tt;function showToast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2200)}
 loadSettings();initToday();renderCalendar();
 </script></body></html>
