@@ -67,7 +67,7 @@ function renderExercises(){
   const t=document.createElement('div');
   t.className='exercise-card tabata-card'+(todayDone.tabata?' done':'');
   t.innerHTML=`<button class="check-btn" onclick="toggleExercise('tabata')">${todayDone.tabata?'✓':''}</button>
-    <div class="ex-info"><div class="ex-name">⏱️ TABATA Training</div><div class="ex-meta">YouTubeを見ながらトレーニング</div></div>
+    <div class="ex-info"><div class="ex-name">⏱️ TABATA</div><div class="ex-meta">YouTubeでトレーニング</div></div>
     <button class="youtube-btn" onclick="openTabata(event)">YouTube ▶</button>`;
   el.appendChild(t);
 
