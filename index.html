@@ -16,16 +16,16 @@
 .cal-nav{display:flex;align-items:center;justify-content:space-between}.cal-nav-btn{width:42px;height:42px;border:none;border-radius:50%;background:#fff;box-shadow:var(--shadow);font-size:20px}.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.cal-dow{text-align:center;font-size:11px;color:var(--sub);padding:4px}.cal-day{background:#fff;border:1px solid var(--border);border-radius:12px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center}.cal-day.today{outline:2px solid var(--green)}.cal-stars{font-size:9px;color:#e1a900}.history-item{display:flex;justify-content:space-between;align-items:center}.history-date{font-weight:700}.history-detail{font-size:12px;color:var(--sub);margin-top:3px}.history-stars{color:#e1a900}
 .setting-row{display:flex;justify-content:space-between;align-items:center}.setting-label{font-weight:700}.setting-sub{font-size:12px;color:var(--sub);margin-top:3px}.danger{background:#fff1f1;border:1px solid #f1c7c7;color:var(--danger)}
 .editing-note{display:none;background:#fff7df;border:1px solid #ecd48a;border-radius:14px;padding:10px 12px;font-size:13px;color:#755b00}.editing-note.show{display:block}
-.tabata-card{background:linear-gradient(135deg,#f7fbff,#eef7ff);border-color:#cfe3f5}.youtube-btn{border:none;border-radius:12px;background:#fff0f0;color:#c93636;font-weight:800;font-size:13px;padding:10px 12px;white-space:nowrap}.youtube-btn:active{transform:scale(.98)}
+.tabata-card{background:linear-gradient(135deg,#f7fbff,#eef7ff);border-color:#cfe3f5}.youtube-btn{width:46px;height:34px;border:none;border-radius:10px;background:#ff0033;color:#fff;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(255,0,51,.18)}.youtube-btn:active{transform:scale(.96)}
 .cal-day{cursor:pointer}.cal-day.future{opacity:.38;cursor:default}.cal-day.selected{background:#ecfaf1;border-color:#79c998}.history-item{cursor:pointer}
 nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);display:flex;background:rgba(255,255,255,.94);backdrop-filter:blur(18px);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);z-index:10}nav button{flex:1;border:none;background:none;padding:11px 4px 10px;color:var(--sub);font-size:12px}nav button.active{color:var(--green);font-weight:800}.nav-ico{font-size:21px;display:block;margin-bottom:2px}#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:#254638;color:#fff;padding:10px 18px;border-radius:999px;opacity:0;transition:.25s;z-index:20}#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style></head><body><div id="app">
 <section class="page active" id="page-today">
   <div class="hero"><h1>今日も、少しだけ。</h1><p id="today-date"></p><div class="summary-grid"><div class="summary-card"><div class="v" id="streak-now">0日</div><div class="l">連続記録</div></div><div class="summary-card"><div class="v" id="week-now">0/5</div><div class="l">今週</div></div><div class="summary-card"><div class="v" id="total-reps">0</div><div class="l">累計回数</div></div></div></div>
-  <div class="progress-card"><div class="week-head"><strong>今週の目標</strong><span id="week-label">0 / 5日</span></div><div class="week-bar"><div class="week-fill" id="week-fill" style="width:0%"></div></div><div class="mini-note">1種目でも記録すれば、その日は継続成功。無理なく続けることを優先します。</div></div>
+  
   <div class="editing-note" id="editing-note"></div>
   <div class="section-title" id="training-title">今日のトレーニング</div><div id="exercise-list"></div>
-  <button class="record-btn" id="record-btn" onclick="saveRecord()">記録する</button><button class="action-btn secondary" id="reset-btn" onclick="resetSelectedDate()" style="display:none">この日の記録を削除</button>
+  <button class="record-btn" id="record-btn" onclick="saveRecord()">記録する</button><button class="action-btn secondary" id="reset-btn" onclick="resetSelectedDate()" style="display:none">この日の記録を削除</button><div class="progress-card"><div class="week-head"><strong>今週の目標</strong><span id="week-label">0 / 5日</span></div><div class="week-bar"><div class="week-fill" id="week-fill" style="width:0%"></div></div><div class="mini-note">1種目でも記録すれば、その日は継続成功。無理なく続けることを優先します。</div></div>
   <div class="stats-card"><div class="section-title">積み重ね</div><div class="badges" id="badges"></div><div class="mini-note" id="best-streak"></div></div>
 </section>
 <section class="page" id="page-calendar"><div class="cal-nav"><button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button><strong id="cal-month-label"></strong><button class="cal-nav-btn" onclick="changeMonth(1)">›</button></div><div class="cal-grid" id="cal-grid"></div><div id="history-list"></div></section>
@@ -68,7 +68,7 @@ function renderExercises(){
   t.className='exercise-card tabata-card'+(todayDone.tabata?' done':'');
   t.innerHTML=`<button class="check-btn" onclick="toggleExercise('tabata')">${todayDone.tabata?'✓':''}</button>
     <div class="ex-info"><div class="ex-name">⏱️ TABATA</div><div class="ex-meta">YouTubeでトレーニング</div></div>
-    <button class="youtube-btn" onclick="openTabata(event)">YouTube ▶</button>`;
+    <button class="youtube-btn" aria-label="YouTubeで開く" title="YouTubeで開く" onclick="openTabata(event)">▶</button>`;
   el.appendChild(t);
 
   EXERCISES.forEach(ex=>{
